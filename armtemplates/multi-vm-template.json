@@ -252,7 +252,7 @@
                 "typeHandlerVersion": "1.7",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": ["https://raw.githubusercontent.com/dg-github816/ScriptRepository/main/PowerShell/Install-IIS.ps1"],
+                    "fileUris": ["https://raw.githubusercontent.com/dg-github816/publicrepos/master/Scripts/Install-IIS.ps1"],
                     "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File Install-IIS.ps1"
               }
             }
