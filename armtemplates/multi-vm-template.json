@@ -1,0 +1,267 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "allowedValues": [
+                "uksouth",
+                "uknorth",
+                "westeurope"
+            ],
+            "defaultValue": "uksouth",
+            "metadata": {
+                "description": "Location for resource"
+            }
+        },
+        "CreatedDate": {
+            "type": "string",
+            "defaultValue":"[utcNow('dd-MM-yyyy')]",
+            "metadata": {
+                "description": "Resource creation date"
+            }
+        },
+        "networkSecurityGroupRules": {
+            "type": "array"
+        },
+        "addressPrefixes": {
+            "type": "array"
+        },
+        "subnets": {
+            "type": "array"
+        },
+        "publicIpAddressType": {
+            "type": "string"
+        },
+        "publicIpAddressSku": {
+            "type": "string"
+        },
+        "osDiskType": {
+            "type": "string"
+        },
+        "virtualMachineSize": {
+            "type": "string",
+            "defaultValue": "Standard_B2s"
+        },
+        "adminUsername": {
+            "type": "string",
+            "allowedValues": [
+                "locadmin"
+            ],
+            "defaultValue": "locadmin"
+        },
+        "adminPassword": {
+            "type": "secureString"
+        },
+        "subnetname": {
+            "type": "string",
+            "defaultValue": "subnet0",
+            "metadata": {
+                "description": "description"
+            }
+        },
+        "patchMode": {
+            "type": "string"
+        },
+        "ResourceCount": {
+            "type": "int",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "Reqiured resource count"
+            }
+        }
+    },
+    "variables": {
+        "virtualNetworkName": "[tolower(concat(resourceGroup().name,'-vnet'))]",
+        "nsgname": "[tolower(concat(resourceGroup().name,'-nsg'))]",
+        "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('nsgname'))]",
+        "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('subnetName'))]",
+        "publicIpAddressName": "[tolower(concat(resourceGroup().name,'-pip'))]",
+        "VirtualMachineName": "[tolower(concat('az01',resourceGroup().name))]",
+        "VirtualMachineComputerName": "[tolower(concat('az01',resourceGroup().name))]",
+        "networkInterfaceName": "[tolower(concat(resourceGroup().name,'-int'))]",
+        "vmExtensionName": "customScriptExtension",
+        "computeApiVersion": "2018-10-01"
+
+    },
+    "resources": [
+        {
+
+            "name": "[tolower(concat(variables('networkInterfaceName'),copyIndex()))]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "copy": {
+                "name": "Duplicate interface",
+                "count": "[parameters('ResourceCount')]"
+            },
+            "apiVersion": "2018-10-01",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgname'))]",
+                "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+                "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'),copyIndex())]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', toLower(concat(variables('publicIpAddressName'),copyIndex())))]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[variables('nsgId')]"
+                }
+            },
+            "tags": {
+                "Env": "[resourceGroup().name]",
+                "CreatedBy": "Daniel Gothard",
+                "CreatedDate": "[parameters('CreatedDate')]"
+            }
+        },
+        {
+            "name": "[variables('nsgname')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-02-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": "[parameters('networkSecurityGroupRules')]"
+            },
+            "tags": {
+                "Env": "[resourceGroup().name]",
+                "CreatedBy": "Daniel Gothard",
+                "CreatedDate": "[parameters('CreatedDate')]"
+            }
+        },
+        {
+            "name": "[variables('virtualNetworkName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2019-09-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": "[parameters('addressPrefixes')]"
+                },
+                "subnets": "[parameters('subnets')]"
+            },
+            "tags": {
+                "Env": "[resourceGroup().name]",
+                "CreatedBy": "Daniel Gothard",
+                "CreatedDate": "[parameters('CreatedDate')]"
+            }
+        },
+        {
+            "name": "[concat(variables('publicIpAddressName'),copyIndex())]",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "copy": {
+                "name": "Duplicate pip",
+                "count": "[parameters('ResourceCount')]"
+            },
+            "apiVersion": "2019-02-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publicIpAllocationMethod": "[parameters('publicIpAddressType')]"
+            },
+            "sku": {
+                "name": "[parameters('publicIpAddressSku')]"
+            },
+            "tags": {
+                "Env": "[resourceGroup().name]",
+                "CreatedBy": "Daniel Gothard",
+                "CreatedDate": "[parameters('CreatedDate')]"
+            }
+        },
+        {
+            "name": "[concat(variables('virtualMachineName'),copyIndex())]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "copy": {
+                "name": "Duplicate VM",
+                "count": "[parameters('ResourceCount')]"
+            },
+            "apiVersion": "2020-12-01",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName'),copyIndex())]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "createOption": "fromImage",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('osDiskType')]"
+                        }
+                    },
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2019-Datacenter",
+                        "version": "latest"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('networkInterfaceName'),copyIndex()))]"
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[concat(variables('virtualMachineComputerName'),copyIndex())]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "enableAutomaticUpdates": true,
+                        "provisionVmAgent": true,
+                        "patchSettings": {
+                            "patchMode": "[parameters('patchMode')]"
+                        }
+                    }
+                }
+            },
+            "tags": {
+                "Env": "[resourceGroup().name]",
+                "CreatedBy": "Daniel Gothard",
+                "CreatedDate": "[parameters('CreatedDate')]"
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "copy": {
+                "name": "Duplicate extension",
+                "count": "[parameters('ResourceCount')]"
+            },
+            "name": "[concat(variables('virtualMachineName'),copyIndex(), '/', variables('vmExtensionName'))]",
+            "apiVersion": "[variables('computeApiVersion')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('virtualMachineName'),copyIndex())]"
+            ],
+                "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "1.7",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": ["https://raw.githubusercontent.com/dg-github816/ScriptRepository/main/PowerShell/Install-IIS.ps1"],
+                    "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File Install-IIS.ps1"
+              }
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        }
+    }
+}
