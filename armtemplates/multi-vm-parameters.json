@@ -37,7 +37,7 @@
         },
         "addressPrefixes": {
             "value": [
-                "10.2.0.0/16"
+                "10.3.0.0/16"
             ]
         },
         "subnets": {
@@ -45,7 +45,7 @@
                 {
                     "name": "subnet0",
                     "properties": {
-                        "addressPrefix": "10.2.0.0/24"
+                        "addressPrefix": "10.3.0.0/24"
                     }
                 }
             ]
