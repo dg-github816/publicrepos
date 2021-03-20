@@ -68,7 +68,7 @@
         "adminPassword": {
             "reference": {
                 "keyVault": {
-                    "id": "/subscriptions/cd4fbd37-eb81-4a2b-897c-3bd718639d35/resourceGroups/DEV/providers/Microsoft.KeyVault/vaults/azdev01keyvault"
+                    "id": "/subscriptions/e6a75286-eb7a-4de1-8f28-71d3fdc89c9e/resourceGroups/DEV/providers/Microsoft.KeyVault/vaults/azdev01keyvault3422"
                 },
                 "secretName": "vmAdminPassword"
             }
